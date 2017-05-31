@@ -4,21 +4,30 @@ const socketClient = require('socket.io-client');
 const serverUrl = 'http://blackmiaool.jios.org:9012/';
 
 class God {
-    constructor() {
+    constructor({
+        log=true
+    }) {
         const socket = socketClient(serverUrl);
         this.socket = socket;
 
-        socket.on('connect', function () {
-            console.log("on connect");
+        this.log = (msg) => {
+            if (log) {
+                console.log(this.name + " " + msg);
+            }
+        }
+        this.name="god";
+        this.main="black";
+        socket.on('connect',  () =>{
+            this.log("connect");
         });
-        socket.on('connect_error', function (error) {
-            console.log(error);
+        socket.on('connect_error',  (error) =>{
+            this.log(error);
         });
-        socket.on('event', function (data) {
-            console.log('event', data);
+        socket.on('event',  (data) =>{
+            this.log('event', data);
         });
-        socket.on('disconnect', function () {
-            console.log("disconnect");
+        socket.on('disconnect',  () =>{
+            this.log("disconnect");
         });
         socket.on('message', ({
             room,
@@ -29,13 +38,17 @@ class God {
             if (!this.listeners[room]) {
                 return;
             }
-            if (name === this.name) {
+            if (name === this.username) {
                 return;
             }
             const message = {
                 type,
                 content,
+                room,
+                name,
+                source:this.name
             }
+            
             this.listeners[room].forEach(function (cb) {
                 cb(message);
             });
@@ -46,11 +59,11 @@ class God {
         });
     }
     login(name, password) {
-        this.name = name;
+        this.username = name;
         return new Promise((resolve, reject) => {
             this.socket.emit("login", {
                 name,
-                password
+                password:md5(password)
             }, ({
                 code,
                 msg
